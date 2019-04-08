@@ -483,11 +483,7 @@ public:
         }
     }
 
-    float lastTime = 0;
-    int dir = 1;
-    void animate(float time) {
-        float dt = time - lastTime;
-
+    void animate(float dt) {
         for (int i = 0; i < ellipsoids.size(); i++) {
             ellipsoids[i]->center = ellipsoids[i]->center + randomForce()*dt;
 
@@ -500,7 +496,6 @@ public:
                 ellipsoids[i]->center.z = eCenter.z;
             }
         }
-        lastTime = time;
     }
 
     vec4 randomForce() {
@@ -616,7 +611,16 @@ void onMouse(int button, int state, int pX, int pY) {
 
 }
 
+static float lastSec = 0;
 void onIdle() {
-    scene.animate(glutGet(GLUT_ELAPSED_TIME) / 1000.0f);
+    long time = glutGet(GLUT_ELAPSED_TIME);
+    float sec = time / 1000.0f;
+    const float dT = 0.01;
+    float timeChanged = sec - lastSec;
+    for (float t = 0; t < timeChanged; t += dT) {
+        float dt = fmin(dT, timeChanged - t);
+        scene.animate(dt);
+    }    
+    lastSec = sec;
     glutPostRedisplay();
 }
