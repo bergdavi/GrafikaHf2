@@ -164,7 +164,6 @@ Hit intersect(const Triangle tri, const Ray ray) {
     }
     vec3 p = ray.start + ray.dir * t;
 
-
     if(dot(cross(tri.r2.xyz-tri.r1.xyz, p-tri.r1.xyz), tri.n.xyz) < 0) {
         return hit;
     }
@@ -191,13 +190,19 @@ Hit firstIntersect(Ray ray) {
     bestHit.t = -1;
     for (int i = 0; i < ellipsoidCount; i++) {
         Hit hit = intersect(ellipsoids[i], ray);
-        if (hit.t > 0 && (bestHit.t < 0 || hit.t < bestHit.t))  bestHit = hit;
+        if (hit.t > 0 && (bestHit.t < 0 || hit.t < bestHit.t)) {
+            bestHit = hit;
+        }
     }
     for (int i = 0; i < triangleCount; i++) {
         Hit hit = intersect(triangles[i], ray);
-        if (hit.t > 0 && (bestHit.t < 0 || hit.t < bestHit.t))  bestHit = hit;
+        if (hit.t > 0 && (bestHit.t < 0 || hit.t < bestHit.t)) {
+            bestHit = hit;
+        }
     }
-    if (dot(ray.dir, bestHit.normal) > 0) bestHit.normal = bestHit.normal * (-1);
+    if (dot(ray.dir, bestHit.normal) > 0) {
+        bestHit.normal = bestHit.normal * (-1);
+    }
     return bestHit;
 }
 
