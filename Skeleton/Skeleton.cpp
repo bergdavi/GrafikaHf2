@@ -57,7 +57,7 @@ precision highp float;
 
 struct Light {
     vec3 direction;
-    vec3 Le, La;
+    vec3 Le;
 };
 
 struct Material {
@@ -89,15 +89,18 @@ struct Ray {
 };
 
 const int maxObjects = 50;
+const int maxLights = 10;
 
 uniform vec3 cameraEye;
-uniform Light light;
+uniform vec3 La;
+uniform Light lights[maxLights];
 uniform Material materials[5];
 uniform Ellipsoid ellipsoids[maxObjects];
 uniform Triangle triangles[maxObjects];
 
 uniform int ellipsoidCount;
 uniform int triangleCount;
+uniform int lightCount;
 
 in vec3 p;
 out vec4 outColor;
@@ -108,17 +111,17 @@ Hit intersect(const Ellipsoid e,const Ray ray) {
     hit.t = -1;
 
     mat4 translate = mat4(
-        1/e.size.x, 0         , 0         , 0,
-        0         , 1/e.size.y, 0         , 0,
-        0         , 0         , 1/e.size.z, 0,
-        0         , 0         , 0         , 1
+    1/e.size.x, 0         , 0         , 0,
+    0         , 1/e.size.y, 0         , 0,
+    0         , 0         , 1/e.size.z, 0,
+    0         , 0         , 0         , 1
     );
 
     mat4 translateInv = mat4(
-        e.size.x, 0       , 0       , 0,
-        0       , e.size.y, 0       , 0,
-        0       , 0       , e.size.z, 0,
-        0       , 0       , 0       , 1
+    e.size.x, 0       , 0       , 0,
+    0       , e.size.y, 0       , 0,
+    0       , 0       , e.size.z, 0,
+    0       , 0       , 0       , 1
     );
 
     float radius = 1;
@@ -237,23 +240,26 @@ vec3 trace(Ray r) {
     for(int d = 0; d < maxDepth; d++) {
         Hit hit = firstIntersect(r);
         if(hit.t < 0) {
-            outRadiance += weight*light.La;
+            outRadiance += weight*La;
             break;
         }
         if(materials[hit.material].rough == 1) {
-            outRadiance += weight*materials[hit.material].ka*light.La;
+            outRadiance += weight*materials[hit.material].ka*La;
             vec3 pos = hit.position + hit.normal * epsilon;
-            vec3 lightDirection = light.direction;
-            Ray shadowRay;
-            shadowRay.start = pos;
-            shadowRay.dir = -light.direction;
-            float cosTheta = dot(hit.normal, -lightDirection);
-            if(cosTheta > 0 && !shadowIntersect(shadowRay)) {
-                outRadiance += weight * light.Le*materials[hit.material].kd * cosTheta;
-                vec3 halfway = normalize(-r.dir - lightDirection);
-                float cosDelta = dot(hit.normal, halfway);
-                if(cosDelta > 0) {
-                    outRadiance += weight * light.Le*materials[hit.material].ks*pow(cosDelta, materials[hit.material].shininess);
+            for(int i = 0; i < lightCount; i++) {
+                Light light = lights[i];
+                vec3 lightDirection = light.direction;
+                Ray shadowRay;
+                shadowRay.start = pos;
+                shadowRay.dir = -light.direction;
+                float cosTheta = dot(hit.normal, -lightDirection);
+                if(cosTheta > 0 && !shadowIntersect(shadowRay)) {
+                    outRadiance += weight * light.Le*materials[hit.material].kd * cosTheta;
+                    vec3 halfway = normalize(-r.dir - lightDirection);
+                    float cosDelta = dot(hit.normal, halfway);
+                    if(cosDelta > 0) {
+                        outRadiance += weight * light.Le*materials[hit.material].ks*pow(cosDelta, materials[hit.material].shininess);
+                    }
                 }
             }
         }
@@ -305,21 +311,18 @@ struct Camera {
 };
 
 struct Light {
-    vec3 direction, Le, La;
+    vec3 direction, Le;
 
-    Light(const vec3 &direction, const vec3 &Le, const vec3 &La) : direction(normalize(direction)), Le(Le), La(La) {}
+    Light(const vec3 &direction, const vec3 &Le) : direction(normalize(direction)), Le(Le) {}
 
-    void setUniform(unsigned int shaderProgram) {
+    void setUniform(unsigned int shaderProgram, int idx) {
         char buffer[100];
 
-        sprintf(buffer, "light.direction");
+        sprintf(buffer, "lights[%d].direction", idx);
         direction.SetUniform(shaderProgram, buffer);
 
-        sprintf(buffer, "light.Le");
+        sprintf(buffer, "lights[%d].Le", idx);
         Le.SetUniform(shaderProgram, buffer);
-
-        sprintf(buffer, "light.La");
-        La.SetUniform(shaderProgram, buffer);
     }
 };
 
@@ -396,7 +399,7 @@ struct Triangle {
 };
 
 struct Ellipsoid {
-    vec4 center;
+    vec4 center, speed;
     vec3 size;
     int material;
 
@@ -422,9 +425,11 @@ class Scene {
     std::vector<Ellipsoid*> ellipsoids;
     std::vector<Triangle*> triangles;
     std::vector<Material*> materials;
+    std::vector<Light*> lights;
     Camera *camera;
-    Light *light;
+    vec3 La;
     vec3 center;
+    float sumDt = 1;
 
 public:
 
@@ -434,7 +439,10 @@ public:
     void build() {
         center = vec3(0, 0, 11);
         camera = new Camera(vec3(0, 0, 0), vec3(0, 0, 10), vec3(0, 1, 0), 80 * M_PI / 180.0);
-        light = new Light(vec3(0.5, -1, 0), vec3(10, 10, 10), vec3(0.9, 0.9, 0.9));
+        lights.push_back(new Light(vec3(1, -1, 0), vec3(0, 0, 10)));
+        lights.push_back(new Light(vec3(-1, -1, 0), vec3(0, 10, 0)));
+        lights.push_back(new Light(vec3(0, -1, 0), vec3(10, 0, 0)));
+        La = vec3(1, 1, 1);
 
         Material* gold = new Material(vec3(0.166f, 0.138f, 0.044f), vec3(0.5, 0.5, 0.5), vec3(0.17, 0.35, 1.5), vec3(3.1, 2.7, 1.9), 50);
         gold->reflective = true;
@@ -444,13 +452,13 @@ public:
         silver->reflective = true;
         silver->rough = false;
 
-        Material * red = new Material(vec3(0.3f, 0, 0), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 50);
+        Material * red = new Material(vec3(0.15f, 0, 0), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 50);
         red->rough = true;
 
-        Material * yellow = new Material(vec3(0.3f, 0.3f, 0), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 500);
+        Material * yellow = new Material(vec3(0.15f, 0.15f, 0), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 500);
         yellow->rough = true;
 
-        Material * blue = new Material(vec3(0, 0.3f, 0.3f), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 500);
+        Material * blue = new Material(vec3(0, 0.15f, 0.15f), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 500);
         blue->rough = true;
 
         materials.push_back(gold); materials.push_back(silver); materials.push_back(red); materials.push_back(yellow); materials.push_back(blue);
@@ -489,8 +497,13 @@ public:
     }
 
     void animate(float dt) {
+        sumDt += dt;
         for (int i = 0; i < ellipsoids.size(); i++) {
-            ellipsoids[i]->center = ellipsoids[i]->center + randomForce()*dt;
+            if(sumDt > 0.5f) {
+                ellipsoids[i]->speed = randomForce()*0.01;
+            }
+
+            ellipsoids[i]->center = ellipsoids[i]->center+ellipsoids[i]->speed;
 
             vec3 eCenter(ellipsoids[i]->center.x, ellipsoids[i]->center.y, ellipsoids[i]->center.z);
 
@@ -499,12 +512,18 @@ public:
                 ellipsoids[i]->center.x = eCenter.x;
                 ellipsoids[i]->center.y = eCenter.y;
                 ellipsoids[i]->center.z = eCenter.z;
+
+                ellipsoids[i]->speed = ellipsoids[i]->speed*(-1);
             }
+        }
+        if(sumDt > 0.5f) {
+            sumDt = 0;
         }
     }
 
     vec4 randomForce() {
-        return vec4((float)rand() / (float)RAND_MAX * 2 - 1, (float)rand() / (float)RAND_MAX * 2 - 1, (float)rand() / (float)RAND_MAX * 2 - 1, 1);
+        vec3 f = normalize(vec3((float)rand() / (float)RAND_MAX * 2 - 1, (float)rand() / (float)RAND_MAX * 2 - 1, (float)rand() / (float)RAND_MAX * 2 - 1));
+        return vec4(f.x, f.y, f.z, 0);
     }
 
     void setUniform(unsigned int shaderProgram) {
@@ -519,8 +538,19 @@ public:
         location = glGetUniformLocation(shaderProgram, buffer);
         if (location >= 0) glUniform1i(location, triangles.size()); else printf("uniform %s cannot be set\n", buffer);
 
+        sprintf(buffer, "lightCount");
+        location = glGetUniformLocation(shaderProgram, buffer);
+        if (location >= 0) glUniform1i(location, lights.size()); else printf("uniform %s cannot be set\n", buffer);
+
+        sprintf(buffer, "La");
+        La.SetUniform(shaderProgram, buffer);
+
         camera->setUniform(shaderProgram);
-        light->setUniform(shaderProgram);
+
+
+        for(int i = 0; i < lights.size(); i++) {
+            lights[i]->setUniform(shaderProgram, i);
+        }
 
         for (int i = 0; i < ellipsoids.size(); i++) {
             ellipsoids[i]->setUniform(shaderProgram, i);
