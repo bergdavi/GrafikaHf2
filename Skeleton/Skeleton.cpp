@@ -437,8 +437,8 @@ public:
     int material = 0;
 
     void build() {
-        center = vec3(0, 0, 11);
-        camera = new Camera(vec3(0, 0, 0), vec3(0, 0, 10), vec3(0, 1, 0), 80 * M_PI / 180.0);
+        center = vec3(0, 0, 0);
+        camera = new Camera(vec3(0, 0, -11), center, vec3(0, 1, 0), 80 * M_PI / 180.0);
         lights.push_back(new Light(vec3(1, -1, 0), vec3(0, 0, 10)));
         lights.push_back(new Light(vec3(-1, -1, 0), vec3(0, 10, 0)));
         lights.push_back(new Light(vec3(0, -1, 0), vec3(10, 0, 0)));
@@ -465,9 +465,10 @@ public:
 
         buildTriangles();
 
-        ellipsoids.push_back(new Ellipsoid(vec4(-0.5, 0, 11, 1), vec3(0.15, 0.25, 0.1), 2));
-        ellipsoids.push_back(new Ellipsoid(vec4(0.5, 0, 11, 1), vec3(0.15, 0.15, 0.15), 3));
-        ellipsoids.push_back(new Ellipsoid(vec4(0, 0.5, 11, 1), vec3(0.15, 0.1, 0.1), 4));
+        ellipsoids.push_back(new Ellipsoid(vec4(center.x+0, center.y+0.5f, center.z+0, 1), vec3(0.2, 0.15, 0.1), 4));
+        ellipsoids.push_back(new Ellipsoid(vec4(center.x-0.5f, center.y+0, center.z+0, 1), vec3(0.15, 0.25, 0.1), 2));
+        ellipsoids.push_back(new Ellipsoid(vec4(center.x+0.5f, center.y+0, center.z+0, 1), vec3(0.15, 0.15, 0.15), 3));
+
     }
 
     void buildTriangles() {
@@ -486,8 +487,8 @@ public:
             v = v * rotMx;
             vec4 p = o + v;
 
-            Triangle* t1 = new Triangle(vec3(lastP.x, lastP.y, 0), vec3(p.x, p.y, 0), vec3(lastP.x, lastP.y, 10), material);
-            Triangle* t2 = new Triangle(vec3(lastP.x, lastP.y, 10), vec3(p.x, p.y, 10), vec3(p.x, p.y, 0), material);
+            Triangle* t1 = new Triangle(vec3(lastP.x, lastP.y, -1), vec3(p.x, p.y, -1), vec3(lastP.x, lastP.y, -11), material);
+            Triangle* t2 = new Triangle(vec3(lastP.x, lastP.y, -11), vec3(p.x, p.y, -11), vec3(p.x, p.y, -1), material);
 
             triangles.push_back(t1);
             triangles.push_back(t2);
