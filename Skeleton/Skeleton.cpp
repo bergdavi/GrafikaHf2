@@ -438,7 +438,7 @@ public:
 
     void build() {
         center = vec3(0, 0, 0);
-        camera = new Camera(vec3(0, 0, -11), center, vec3(0, 1, 0), 80 * M_PI / 180.0);
+        camera = new Camera(vec3(0, 0, -6), center, vec3(0, 1, 0), 80 * M_PI / 180.0);
         lights.push_back(new Light(vec3(1, -1, 0), vec3(0, 0, 10)));
         lights.push_back(new Light(vec3(-1, -1, 0), vec3(0, 10, 0)));
         lights.push_back(new Light(vec3(0, -1, 0), vec3(10, 0, 0)));
@@ -452,28 +452,28 @@ public:
         silver->reflective = true;
         silver->rough = false;
 
-        Material * red = new Material(vec3(0.15f, 0, 0), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 50);
+        Material * red = new Material(vec3(0.2f, 0, 0), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 50);
         red->rough = true;
 
-        Material * yellow = new Material(vec3(0.15f, 0.15f, 0), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 500);
+        Material * yellow = new Material(vec3(0.2f, 0.2f, 0), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 500);
         yellow->rough = true;
 
-        Material * blue = new Material(vec3(0, 0.15f, 0.15f), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 500);
+        Material * blue = new Material(vec3(0, 0.2f, 0.2f), vec3(0.5, 0.5, 0.5), vec3(0, 0, 0), vec3(0, 0, 0), 500);
         blue->rough = true;
 
         materials.push_back(gold); materials.push_back(silver); materials.push_back(red); materials.push_back(yellow); materials.push_back(blue);
 
         buildTriangles();
 
-        ellipsoids.push_back(new Ellipsoid(vec4(center.x+0, center.y+0.5f, center.z+0, 1), vec3(0.2, 0.15, 0.1), 4));
-        ellipsoids.push_back(new Ellipsoid(vec4(center.x-0.5f, center.y+0, center.z+0, 1), vec3(0.15, 0.25, 0.1), 2));
+        ellipsoids.push_back(new Ellipsoid(vec4(center.x+0, center.y+0.5f, center.z+0, 1), vec3(0.15, 0.1, 0.07), 4));
+        ellipsoids.push_back(new Ellipsoid(vec4(center.x-0.5f, center.y+0, center.z+0, 1), vec3(0.1, 0.15, 0.1), 2));
         ellipsoids.push_back(new Ellipsoid(vec4(center.x+0.5f, center.y+0, center.z+0, 1), vec3(0.15, 0.15, 0.15), 3));
 
     }
 
     void buildTriangles() {
         triangles.clear();
-        vec4 v = vec4(0, 1, 0, 1);
+        vec4 v = vec4(0, 0.5, 0, 1);
         vec4 o = vec4(0, 0, 0, 1);
 
 
@@ -487,8 +487,8 @@ public:
             v = v * rotMx;
             vec4 p = o + v;
 
-            Triangle* t1 = new Triangle(vec3(lastP.x, lastP.y, -1), vec3(p.x, p.y, -1), vec3(lastP.x, lastP.y, -11), material);
-            Triangle* t2 = new Triangle(vec3(lastP.x, lastP.y, -11), vec3(p.x, p.y, -11), vec3(p.x, p.y, -1), material);
+            Triangle* t1 = new Triangle(vec3(lastP.x, lastP.y, -1), vec3(p.x, p.y, -1), vec3(lastP.x, lastP.y, -6), material);
+            Triangle* t2 = new Triangle(vec3(lastP.x, lastP.y, -6), vec3(p.x, p.y, -6), vec3(p.x, p.y, -1), material);
 
             triangles.push_back(t1);
             triangles.push_back(t2);
@@ -508,8 +508,8 @@ public:
 
             vec3 eCenter(ellipsoids[i]->center.x, ellipsoids[i]->center.y, ellipsoids[i]->center.z);
 
-            if (length(eCenter - center) > 1) {
-                eCenter = center + normalize(eCenter - center);
+            if (length(eCenter - center) > 0.5) {
+                eCenter = center + normalize(eCenter - center)*0.5;
                 ellipsoids[i]->center.x = eCenter.x;
                 ellipsoids[i]->center.y = eCenter.y;
                 ellipsoids[i]->center.z = eCenter.z;
