@@ -517,6 +517,17 @@ public:
                 ellipsoids[i]->speed = ellipsoids[i]->speed*(-1);
             }
         }
+
+        mat4 rotMx = RotationMatrix(5*M_PI/180.0f*dt, vec3(0,0,1));
+
+        vec3 u = camera->up;
+        vec4 u2 = vec4(u.x, u.y, u.z, 1) * rotMx;
+        camera->up = vec3(u2.x, u2.y, u2.z);
+
+        vec3 r = camera->right;
+        vec4 r2 = vec4(r.x, r.y, r.z, 1) * rotMx;
+        camera->right = vec3(r2.x, r2.y, r2.z);
+
         if(sumDt > 0.5f) {
             sumDt = 0;
         }
@@ -601,6 +612,11 @@ void onInitialization() {
     gpuProgram.Create(vertexSource, fragmentSource, "outColor");
     scene.build();
     background.create();
+
+    printf("[A] Add side\n");
+    printf("[G] Change material to gold\n");
+    printf("[S] Change material to silver\n");
+
     glutPostRedisplay();
 }
 
